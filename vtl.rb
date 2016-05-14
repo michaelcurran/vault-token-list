@@ -20,7 +20,7 @@ end
 body = JSON.parse(consul_resp.body)
 
 body.each do |b|
-	# Removes the backend path name from the path, if default this is "vault"
+  # Removes the backend path name from the path, if default this is "vault"
   path = b.gsub(/^\w+\//, '')
 
   vault_uri = URI("#{vault_addr}/v1/sys/raw/#{path}")

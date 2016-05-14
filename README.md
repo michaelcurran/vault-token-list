@@ -1,4 +1,4 @@
-# Vault Token Lookup
+# Vault Token List
 
 ## Overview
 
