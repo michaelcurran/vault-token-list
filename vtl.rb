@@ -19,9 +19,9 @@ end
 
 body = JSON.parse(consul_resp.body)
 
-body.each do |b|
+body.each do |path|
   # Removes the backend path name from the path, if default this is "vault"
-  path = b.gsub(/^\w+\//, '')
+  path.sub!(/^\w+\//, '')
 
   vault_uri = URI("#{vault_addr}/v1/sys/raw/#{path}")
   vault_req = Net::HTTP::Get.new(vault_uri)
