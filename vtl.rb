@@ -6,12 +6,14 @@
 require 'net/http'
 require 'json'
 
-token = ENV['VAULT_TOKEN']
 consul_addr = ''
+consul_token = ENV['CONSUL_TOKEN']
 vault_addr = ''
+vault_token = ENV['VAULT_TOKEN']
 
 consul_uri = URI("#{consul_addr}/v1/kv/vault/sys/token/id?keys")
 consul_req = Net::HTTP::Get.new(consul_uri)
+consul_req.add_field("X-Consul-Token", "#{consul_token}")
 
 consul_resp = Net::HTTP.start(consul_uri.hostname, consul_uri.port) do |http|
   http.request(consul_req)
@@ -25,7 +27,7 @@ body.each do |path|
 
   vault_uri = URI("#{vault_addr}/v1/sys/raw/#{path}")
   vault_req = Net::HTTP::Get.new(vault_uri)
-  vault_req.add_field("X-Vault-Token", "#{token}")
+  vault_req.add_field("X-Vault-Token", "#{vault_token}")
 
   vault_resp = Net::HTTP.start(vault_uri.hostname, vault_uri.port) do |http|
     http.request(vault_req)
