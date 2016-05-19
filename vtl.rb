@@ -3,23 +3,26 @@
 # This will list out all active vault tokens that are stored in a consul backend
 # It displays the DisplayName, Key (token), and associated policies, per token
 
-require 'net/http'
-require 'json'
+require "net/http"
+require "json"
 
-$vault_token = ENV['VAULT_TOKEN']
+consul_addr = ""
+consul_token = ENV["CONSUL_TOKEN"]
+vault_addr = ""
+vault_token = ENV["VAULT_TOKEN"]
 
-consul_addr = ''
-consul_token = ENV['CONSUL_TOKEN']
-vault_addr = ''
+def fetch_resp(uri, token, limit = 10)
+  raise ArgumentError, "too many HTTP redirects" if limit == 0
 
-# Follows redirects when using HA and reaching a standby node
-def fetch(vault_uri, limit = 10)
-  raise ArgumentError, 'too many HTTP redirects' if limit == 0
+  req = Net::HTTP::Get.new(uri)
 
-  req = Net::HTTP::Get.new(vault_uri)
-  req.add_field("X-Vault-Token", "#{$vault_token}")
+  if uri.to_s.include?("sys/raw")
+    req.add_field("X-Vault-Token", "#{token}")
+  else
+    req.add_field("X-Consul-Token", "#{token}")
+  end
 
-  resp = Net::HTTP.start(vault_uri.hostname, vault_uri.port) do |http|
+  resp = Net::HTTP.start(uri.hostname, uri.port) do |http|
     http.request(req)
   end
 
@@ -27,31 +30,27 @@ def fetch(vault_uri, limit = 10)
   when Net::HTTPSuccess
     resp
   when Net::HTTPRedirection
-    location = resp['location']
-    fetch(URI(location), limit - 1)
+    location = resp["location"]
+    # Follows redirects when using HA with vault and a standby nodeis reached
+    fetch_resp(URI(location), token, limit - 1)
   else
-    puts "There was an error with the connection to #{vault_uri}"
+    puts "Unexpected response from #{uri}"
   end
 end
 
 # Get list of paths to encrypted keys from consul
 consul_uri = URI("#{consul_addr}/v1/kv/vault/sys/token/id?keys")
-consul_req = Net::HTTP::Get.new(consul_uri)
-consul_req.add_field("X-Consul-Token", "#{consul_token}")
-
-consul_resp = Net::HTTP.start(consul_uri.hostname, consul_uri.port) do |http|
-  http.request(consul_req)
-end
+consul_resp = fetch_resp(consul_uri, consul_token)
 
 body = JSON.parse(consul_resp.body)
 
 # For each path/key in the consul response, query vault to read the key
 body.each do |path|
   # Removes the backend path name from the path, if default this is "vault"
-  path.sub!(/^\w+\//, '')
+  path.sub!(/^\w+\//, "")
 
   vault_uri = URI("#{vault_addr}/v1/sys/raw/#{path}")
-  vault_resp = fetch(vault_uri)
+  vault_resp = fetch_resp(vault_uri, vault_token)
 
   h = JSON.parse(vault_resp.body)
   hv = JSON.parse(h["value"])
