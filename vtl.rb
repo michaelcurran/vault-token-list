@@ -58,8 +58,8 @@ body.each do |path|
   h = JSON.parse(vault_resp.body)
   hv = JSON.parse(h['value'])
 
-  puts "Display Name: #{hv['DisplayName']}"
-  puts "Key: #{hv['ID']}"
-  puts "Policies: #{hv['Policies']}"
+  puts "Display Name: #{hv['display_name'].nil? ? hv['DisplayName'] : hv['display_name']}"
+  puts "Key: #{hv['ID'].nil? ? hv['id'] : hv['ID']}"
+  puts "Policies: #{hv['Policies'].nil? ? hv['policies'] : hv['Policies']}"
   puts "\n"
 end
